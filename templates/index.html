@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>채용공고 검색</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f7fa;
+      color: #333;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      color: #1a1a2e;
+    }
+
+    .search-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 1.75rem;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      margin-bottom: 1.5rem;
+    }
+
+    .field-label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 0.5rem;
+    }
+
+    .keyword-input {
+      width: 100%;
+      padding: 0.65rem 0.9rem;
+      border: 1.5px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    .keyword-input:focus { border-color: #4f46e5; }
+
+    .sites-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 1.25rem;
+    }
+
+    .site-label {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+      user-select: none;
+    }
+    .site-label input[type="checkbox"] { accent-color: #4f46e5; width: 16px; height: 16px; }
+
+    .submit-btn {
+      margin-top: 1.25rem;
+      padding: 0.65rem 1.75rem;
+      background: #4f46e5;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, opacity 0.2s;
+    }
+    .submit-btn:hover:not(:disabled) { background: #4338ca; }
+    .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .error-box {
+      background: #fef2f2;
+      border: 1px solid #fca5a5;
+      color: #b91c1c;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1.25rem;
+      font-size: 0.9rem;
+    }
+
+    .results-section { margin-top: 0.5rem; }
+
+    .results-header {
+      font-size: 0.95rem;
+      color: #6b7280;
+      margin-bottom: 1rem;
+    }
+    .results-header strong { color: #1a1a2e; }
+
+    .no-results {
+      text-align: center;
+      color: #9ca3af;
+      padding: 2.5rem 0;
+      font-size: 1rem;
+    }
+
+    .job-card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+      margin-bottom: 0.85rem;
+      transition: box-shadow 0.2s;
+    }
+    .job-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+
+    .job-title a {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #4f46e5;
+      text-decoration: none;
+    }
+    .job-title a:hover { text-decoration: underline; }
+
+    .job-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1.25rem;
+      margin-top: 0.4rem;
+      font-size: 0.875rem;
+      color: #6b7280;
+    }
+    .job-meta span { display: flex; align-items: center; gap: 0.25rem; }
+
+    .job-tags {
+      margin-top: 0.6rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+    .tag {
+      background: #ede9fe;
+      color: #5b21b6;
+      border-radius: 999px;
+      padding: 0.2rem 0.65rem;
+      font-size: 0.78rem;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>채용공고 검색</h1>
+
+    <div class="search-card">
+      <form method="post" action="/search" id="search-form">
+        <label class="field-label" for="keywords">키워드</label>
+        <input
+          class="keyword-input"
+          type="text"
+          id="keywords"
+          name="keywords"
+          placeholder="예: Python, Django (쉼표 또는 공백으로 구분)"
+          value="{{ keywords_input }}"
+          autocomplete="off"
+        />
+
+        <div class="sites-row">
+          {% for site in all_sites %}
+          <label class="site-label">
+            <input
+              type="checkbox"
+              name="sites"
+              value="{{ site }}"
+              {% if site in selected_sites %}checked{% endif %}
+            />
+            {{ site }}
+          </label>
+          {% endfor %}
+        </div>
+
+        <button class="submit-btn" type="submit" id="submit-btn">검색</button>
+      </form>
+    </div>
+
+    {% if error %}
+    <div class="error-box">{{ error }}</div>
+    {% endif %}
+
+    {% if searched %}
+    <div class="results-section">
+      <p class="results-header">총 <strong>{{ jobs | length }}</strong>건의 결과</p>
+
+      {% if jobs %}
+        {% for job in jobs %}
+        <div class="job-card">
+          <div class="job-title">
+            <a href="{{ job.url }}" target="_blank" rel="noopener noreferrer">{{ job.title }}</a>
+          </div>
+          <div class="job-meta">
+            <span>🏢 {{ job.company }}</span>
+            <span>📌 {{ job.source }}</span>
+          </div>
+          {% if job.tags %}
+          <div class="job-tags">
+            {% for tag in job.tags.split() %}
+            <span class="tag">{{ tag }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      {% else %}
+        <p class="no-results">검색 결과가 없습니다.</p>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  <script>
+    document.getElementById('search-form').addEventListener('submit', function () {
+      var btn = document.getElementById('submit-btn');
+      btn.disabled = true;
+      btn.textContent = '검색 중...';
+    });
+  </script>
+</body>
+</html>
