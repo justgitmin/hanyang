@@ -69,7 +69,7 @@ async def search(
 
     keyword_list = parse_keywords(keywords)
     raw_jobs = crawl_all(keyword_list, sites)
-    jobs = apply_filter(raw_jobs)
+    jobs = apply_filter(raw_jobs, keyword_list)
 
     error_msg = None
     if not raw_jobs:
